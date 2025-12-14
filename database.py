@@ -1,17 +1,9 @@
-"""
-database.py
------------
-Handles all CSV file operations for persisting game data.
-Provides CRUD operations for rooms, players, and games.
-"""
 
 import csv
 import os
 from typing import List, Optional
 from models import Room, Player, Game
 import threading
-
-# Thread lock for CSV operations to prevent race conditions
 csv_lock = threading.Lock()
 
 DATA_DIR = 'data'
@@ -20,22 +12,15 @@ PLAYERS_FILE = os.path.join(DATA_DIR, 'players.csv')
 GAMES_FILE = os.path.join(DATA_DIR, 'games.csv')
 
 def init_database():
-    """Initialize CSV files with headers if they don't exist"""
     os.makedirs(DATA_DIR, exist_ok=True)
-    
-    # Initialize rooms.csv
     if not os.path.exists(ROOMS_FILE):
         with open(ROOMS_FILE, 'w', newline='') as f:
             writer = csv.DictWriter(f, fieldnames=['room_id', 'created_by', 'status', 'player_count', 'created_at'])
             writer.writeheader()
-    
-    # Initialize players.csv
     if not os.path.exists(PLAYERS_FILE):
         with open(PLAYERS_FILE, 'w', newline='') as f:
             writer = csv.DictWriter(f, fieldnames=['player_id', 'name', 'room_id', 'role', 'points', 'joined_at'])
             writer.writeheader()
-    
-    # Initialize games.csv
     if not os.path.exists(GAMES_FILE):
         with open(GAMES_FILE, 'w', newline='') as f:
             writer = csv.DictWriter(f, fieldnames=[
@@ -44,10 +29,6 @@ def init_database():
                 'chor_points', 'sipahi_points', 'status', 'created_at'
             ])
             writer.writeheader()
-
-
-# ========== ROOM OPERATIONS ==========
-
 def create_room(room: Room) -> Room:
     """Create a new room"""
     with csv_lock:
@@ -58,7 +39,6 @@ def create_room(room: Room) -> Room:
 
 
 def get_room(room_id: str) -> Optional[Room]:
-    """Get room by ID"""
     import csv
     import os
     from typing import List, Optional
@@ -99,20 +79,11 @@ def get_room(room_id: str) -> Optional[Room]:
         return room
 
     def get_room(room_id: str) -> Optional[Room]:
-        """
-        database.py
-        -----------
-        Handles all CSV file operations for persisting game data.
-        Provides CRUD operations for rooms, players, and games.
-        """
-
         import csv
         import os
         from typing import List, Optional
         from models import Room, Player, Game
         import threading
-
-        # Thread lock for CSV operations to prevent race conditions
         csv_lock = threading.Lock()
 
         DATA_DIR = 'data'
@@ -121,22 +92,16 @@ def get_room(room_id: str) -> Optional[Room]:
         GAMES_FILE = os.path.join(DATA_DIR, 'games.csv')
 
         def init_database():
-            """Initialize CSV files with headers if they don't exist"""
             os.makedirs(DATA_DIR, exist_ok=True)
-    
-            # Initialize rooms.csv
             if not os.path.exists(ROOMS_FILE):
                 with open(ROOMS_FILE, 'w', newline='') as f:
                     writer = csv.DictWriter(f, fieldnames=['room_id', 'created_by', 'status', 'player_count', 'created_at'])
                     writer.writeheader()
-    
-            # Initialize players.csv
             if not os.path.exists(PLAYERS_FILE):
                 with open(PLAYERS_FILE, 'w', newline='') as f:
                     writer = csv.DictWriter(f, fieldnames=['player_id', 'name', 'room_id', 'role', 'points', 'joined_at'])
                     writer.writeheader()
-    
-            # Initialize games.csv
+ 
             if not os.path.exists(GAMES_FILE):
                 with open(GAMES_FILE, 'w', newline='') as f:
                     writer = csv.DictWriter(f, fieldnames=[
@@ -146,11 +111,7 @@ def get_room(room_id: str) -> Optional[Room]:
                     ])
                     writer.writeheader()
 
-
-        # ========== ROOM OPERATIONS ==========
-
         def create_room(room: Room) -> Room:
-            """Create a new room"""
             with csv_lock:
                 with open(ROOMS_FILE, 'a', newline='') as f:
                     writer = csv.DictWriter(f, fieldnames=room.to_dict().keys())
@@ -159,7 +120,6 @@ def get_room(room_id: str) -> Optional[Room]:
 
 
         def get_room(room_id: str) -> Optional[Room]:
-            """Get room by ID"""
             with csv_lock:
                 with open(ROOMS_FILE, 'r') as f:
                     reader = csv.DictReader(f)
@@ -170,7 +130,6 @@ def get_room(room_id: str) -> Optional[Room]:
 
 
         def update_room(room: Room):
-            """Update existing room"""
             with csv_lock:
                 rows = []
                 with open(ROOMS_FILE, 'r') as f:
@@ -186,11 +145,7 @@ def get_room(room_id: str) -> Optional[Room]:
                         else:
                             writer.writerow(row)
 
-
-        # ========== PLAYER OPERATIONS ==========
-
         def add_player(player: Player) -> Player:
-            """Add a new player"""
             with csv_lock:
                 with open(PLAYERS_FILE, 'a', newline='') as f:
                     writer = csv.DictWriter(f, fieldnames=player.to_dict().keys())
@@ -199,21 +154,19 @@ def get_room(room_id: str) -> Optional[Room]:
 
 
         def get_players_in_room(room_id: str) -> List[Player]:
-            """Get all players in a room"""
+ 
             players = []
             with csv_lock:
                 with open(PLAYERS_FILE, 'r') as f:
                     reader = csv.DictReader(f)
                     for row in reader:
                         if row['room_id'] == room_id:
-                            # Convert points to int
                             row['points'] = int(row['points']) if row['points'] else 0
                             players.append(Player(**row))
             return players
 
 
         def get_player(player_id: str) -> Optional[Player]:
-            """Get player by ID"""
             with csv_lock:
                 with open(PLAYERS_FILE, 'r') as f:
                     reader = csv.DictReader(f)
@@ -225,7 +178,6 @@ def get_room(room_id: str) -> Optional[Room]:
 
 
         def update_player(player: Player):
-            """Update existing player"""
             with csv_lock:
                 rows = []
                 with open(PLAYERS_FILE, 'r') as f:
@@ -243,7 +195,6 @@ def get_room(room_id: str) -> Optional[Room]:
 
 
         def update_players_batch(players: List[Player]):
-            """Update multiple players at once (for role assignment and scoring)"""
             with csv_lock:
                 rows = []
                 player_dict = {p.player_id: p for p in players}
@@ -264,11 +215,7 @@ def get_room(room_id: str) -> Optional[Room]:
                         else:
                             writer.writerow(row)
 
-
-        # ========== GAME OPERATIONS ==========
-
         def create_game(game: Game) -> Game:
-            """Create a new game record"""
             with csv_lock:
                 with open(GAMES_FILE, 'a', newline='') as f:
                     writer = csv.DictWriter(f, fieldnames=game.to_dict().keys())
@@ -277,7 +224,7 @@ def get_room(room_id: str) -> Optional[Room]:
 
 
         def get_current_game(room_id: str) -> Optional[Game]:
-            """Get the current in-progress game for a room"""
+            
             with csv_lock:
                 with open(GAMES_FILE, 'r') as f:
                     reader = csv.DictReader(f)
@@ -292,7 +239,7 @@ def get_room(room_id: str) -> Optional[Room]:
 
 
         def update_game(game: Game):
-            """Update existing game"""
+            
             with csv_lock:
                 rows = []
                 with open(GAMES_FILE, 'r') as f:
@@ -306,4 +253,5 @@ def get_room(room_id: str) -> Optional[Room]:
                         if row['game_id'] == game.game_id:
                             writer.writerow(game.to_dict())
                         else:
+
                             writer.writerow(row)
