@@ -1,9 +1,3 @@
-"""
-app.py
-------
-Main Flask application with all API endpoints.
-Run this file to start the server.
-"""
 
 from flask import Flask, request, jsonify
 from models import Room, Player, Game
@@ -13,27 +7,16 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# Initialize database on startup
-db.init_database()
-
-
-# ========== ROOM ENDPOINTS ==========
-
 @app.route('/room/create', methods=['POST'])
 def create_room():
-    """
-    Create a new game room.
-    Body: { "player_name": "Alice" }
-    Returns: { "room_id": "abc123", "player_id": "uuid", "message": "Room created" }
-    """
+
     data = request.get_json()
     
     if not data or 'player_name' not in data:
         return jsonify({'error': 'player_name is required'}), 400
     
     player_name = data['player_name']
-    
-    # Create room
+
     room = Room(
         room_id='',
         created_by='',
@@ -41,20 +24,18 @@ def create_room():
         player_count=1
     )
     
-    # Create first player
     player = Player(
         player_id='',
         name=player_name,
         room_id=''
     )
     
-    # Generate IDs
     room = db.create_room(room)
     player.room_id = room.room_id
     room.created_by = player.player_id
     player = db.add_player(player)
     
-    # Update room with creator ID
+
     room.created_by = player.player_id
     db.update_room(room)
     
@@ -70,11 +51,7 @@ def create_room():
 
 @app.route('/room/join', methods=['POST'])
 def join_room():
-    """
-    Join an existing room.
-    Body: { "room_id": "abc123", "player_name": "Bob" }
-    Returns: { "player_id": "uuid", "message": "Joined room" }
-    """
+
     data = request.get_json()
     
     if not data or 'room_id' not in data or 'player_name' not in data:
@@ -83,21 +60,17 @@ def join_room():
     room_id = data['room_id']
     player_name = data['player_name']
     
-    # Check if room exists
     room = db.get_room(room_id)
     if not room:
         return jsonify({'error': 'Room not found'}), 404
-    
-    # Check if room is full
     current_players = db.get_players_in_room(room_id)
     if len(current_players) >= 4:
         return jsonify({'error': 'Room is full'}), 400
-    
-    # Check if room already started
+  
     if room.status != 'waiting':
         return jsonify({'error': 'Game already started'}), 400
     
-    # Add player to room
+
     player = Player(
         player_id='',
         name=player_name,
@@ -105,7 +78,7 @@ def join_room():
     )
     player = db.add_player(player)
     
-    # Update room player count
+
     room.player_count = len(current_players) + 1
     db.update_room(room)
     
@@ -118,10 +91,9 @@ def join_room():
         'waiting_for': 4 - room.player_count
     }
     
-    # Auto-assign roles if 4 players joined
     if room.player_count == 4:
         response['message'] = 'Joined room successfully. All players ready! Assigning roles...'
-        # Trigger role assignment
+    
         assign_roles_internal(room_id)
     
     return jsonify(response), 200
@@ -129,10 +101,7 @@ def join_room():
 
 @app.route('/room/players/<room_id>', methods=['GET'])
 def get_room_players(room_id):
-    """
-    Get all players in a room (names only, no roles).
-    Returns: { "players": [{"player_id": "uuid", "name": "Alice", "points": 0}] }
-    """
+
     room = db.get_room(room_id)
     if not room:
         return jsonify({'error': 'Room not found'}), 404
@@ -146,26 +115,18 @@ def get_room_players(room_id):
         'players': [p.to_public_dict() for p in players]
     }), 200
 
-
-# ========== ROLE ASSIGNMENT ==========
-
 def assign_roles_internal(room_id):
-    """Internal function to assign roles when 4 players join"""
     room = db.get_room(room_id)
     players = db.get_players_in_room(room_id)
     
     if len(players) != 4:
         return False
-    
-    # Assign roles
     players = logic.assign_roles(players)
     db.update_players_batch(players)
-    
-    # Update room status
+
     room.status = 'playing'
     db.update_room(room)
-    
-    # Create game record
+
     mantri = logic.get_mantri_player(players)
     chor = logic.get_chor_player(players)
     
@@ -183,10 +144,6 @@ def assign_roles_internal(room_id):
 
 @app.route('/room/assign/<room_id>', methods=['POST'])
 def assign_roles(room_id):
-    """
-    Manually trigger role assignment (alternative to auto-assign).
-    Can be used for testing or if auto-assign didn't trigger.
-    """
     room = db.get_room(room_id)
     if not room:
         return jsonify({'error': 'Room not found'}), 404
@@ -209,16 +166,9 @@ def assign_roles(room_id):
         }), 200
     else:
         return jsonify({'error': 'Failed to assign roles'}), 500
-
-
-# ========== ROLE VIEW ==========
-
 @app.route('/role/me/<room_id>/<player_id>', methods=['GET'])
 def get_my_role(room_id, player_id):
-    """
-    Get your assigned role (private endpoint for each player).
-    Returns: { "player_id": "uuid", "name": "Alice", "role": "Mantri" }
-    """
+
     room = db.get_room(room_id)
     if not room:
         return jsonify({'error': 'Room not found'}), 404
@@ -242,7 +192,6 @@ def get_my_role(room_id, player_id):
 
 
 def get_role_description(role):
-    """Get role description"""
     descriptions = {
         'Raja': 'You are the Raja (King). Observe and wait for results. You get 1000 points.',
         'Mantri': 'You are the Mantri (Minister). You must guess who the Chor is!',
@@ -250,17 +199,9 @@ def get_role_description(role):
         'Sipahi': 'You are the Sipahi (Soldier). Wait for Mantri to make their guess.'
     }
     return descriptions.get(role, '')
-
-
-# ========== GUESS PHASE ==========
-
 @app.route('/guess/<room_id>', methods=['POST'])
 def submit_guess(room_id):
-    """
-    Mantri submits their guess for who the Chor is.
-    Body: { "mantri_player_id": "uuid", "guessed_player_id": "uuid" }
-    Returns: Game result with scores
-    """
+
     data = request.get_json()
     
     if not data or 'mantri_player_id' not in data or 'guessed_player_id' not in data:
@@ -277,7 +218,6 @@ def submit_guess(room_id):
     if room.status != 'playing':
         return jsonify({'error': 'Game not in progress'}), 400
     
-    # Validate mantri
     mantri = db.get_player(mantri_player_id)
     if not mantri or mantri.room_id != room_id:
         return jsonify({'error': 'Invalid mantri player'}), 403
@@ -285,23 +225,21 @@ def submit_guess(room_id):
     if mantri.role != 'Mantri':
         return jsonify({'error': 'Only Mantri can submit guess'}), 403
     
-    # Validate guessed player
+
     guessed_player = db.get_player(guessed_player_id)
     if not guessed_player or guessed_player.room_id != room_id:
         return jsonify({'error': 'Invalid guessed player'}), 400
-    
-    # Get all players and current game
     players = db.get_players_in_room(room_id)
     game = db.get_current_game(room_id)
     
     if not game:
         return jsonify({'error': 'No active game found'}), 404
     
-    # Calculate scores
+
     chor = logic.get_chor_player(players)
     scores, guess_correct = logic.calculate_scores(mantri, guessed_player_id, chor)
     
-    # Update game record
+  
     game.guessed_player_id = guessed_player_id
     game.guess_correct = guess_correct
     game.raja_points = scores['Raja']
@@ -314,12 +252,9 @@ def submit_guess(room_id):
     # Update player scores
     players = logic.update_player_scores(players, scores)
     db.update_players_batch(players)
-    
-    # Update room status
+
     room.status = 'finished'
     db.update_room(room)
-    
-    # Prepare result
     result = logic.prepare_game_result(players, game)
     
     return jsonify({
@@ -327,15 +262,8 @@ def submit_guess(room_id):
         'result': result
     }), 200
 
-
-# ========== RESULTS ==========
-
 @app.route('/result/<room_id>', methods=['GET'])
 def get_result(room_id):
-    """
-    Get final game result (all roles revealed + scores).
-    Available after Mantri submits guess.
-    """
     room = db.get_room(room_id)
     if not room:
         return jsonify({'error': 'Room not found'}), 404
@@ -353,21 +281,13 @@ def get_result(room_id):
     
     return jsonify(result), 200
 
-
-# ========== LEADERBOARD ==========
-
 @app.route('/leaderboard/<room_id>', methods=['GET'])
 def get_leaderboard(room_id):
-    """
-    Get cumulative scores for all players in the room.
-    """
     room = db.get_room(room_id)
     if not room:
         return jsonify({'error': 'Room not found'}), 404
     
     players = db.get_players_in_room(room_id)
-    
-    # Sort by points descending
     players.sort(key=lambda p: p.points, reverse=True)
     
     leaderboard = []
@@ -383,13 +303,8 @@ def get_leaderboard(room_id):
         'room_id': room_id,
         'leaderboard': leaderboard
     }), 200
-
-
-# ========== HEALTH CHECK ==========
-
 @app.route('/health', methods=['GET'])
 def health_check():
-    """Health check endpoint"""
     return jsonify({
         'status': 'healthy',
         'message': 'Raja-Mantri-Chor-Sipahi Backend is running',
@@ -406,4 +321,5 @@ if __name__ == '__main__':
     print("🎮 Raja-Mantri-Chor-Sipahi Backend Starting...")
     print("📝 Database initialized at ./data/")
     print("🚀 Server running on http://localhost:5000")
+
     app.run(debug=True, host='0.0.0.0', port=5000) 
