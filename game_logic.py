@@ -15,37 +15,24 @@ DEFAULT_POINTS = {
 
 
 def assign_roles(players: List[Player]) -> List[Player]:
-    """
-    Randomly assign roles to 4 players.
-    Returns updated player list with roles assigned.
-    """
     if len(players) != 4:
         raise ValueError("Exactly 4 players required for role assignment")
     
-    # Shuffle roles and assign
+  
     shuffled_roles = random.sample(ROLES, len(ROLES))
     
     for i, player in enumerate(players):
         player.role = shuffled_roles[i]
-        player.points = 0  # Reset points for new game
+        player.points = 0 
     
     return players
 
 
 def calculate_scores(mantri_player: Player, guessed_player_id: str, 
                      chor_player: Player) -> Tuple[Dict[str, int], bool]:
-    """
-    Calculate scores based on Mantri's guess.
-    
-    Returns:
-        - Dictionary of role -> points
-        - Boolean indicating if guess was correct
-    """
     guess_correct = (guessed_player_id == chor_player.player_id)
     
     if guess_correct:
-        # Mantri guessed correctly
-        # Mantri and Sipahi keep their points, Chor gets 0
         scores = {
             'Raja': DEFAULT_POINTS['Raja'],
             'Mantri': DEFAULT_POINTS['Mantri'],
@@ -53,8 +40,7 @@ def calculate_scores(mantri_player: Player, guessed_player_id: str,
             'Sipahi': DEFAULT_POINTS['Sipahi']
         }
     else:
-        # Mantri guessed wrong
-        # Chor steals Mantri's and Sipahi's points
+        
         stolen_points = DEFAULT_POINTS['Mantri'] + DEFAULT_POINTS['Sipahi']
         scores = {
             'Raja': DEFAULT_POINTS['Raja'],
@@ -67,10 +53,7 @@ def calculate_scores(mantri_player: Player, guessed_player_id: str,
 
 
 def update_player_scores(players: List[Player], scores: Dict[str, int]) -> List[Player]:
-    """
-    Update player points based on calculated scores.
-    Adds points to cumulative totals.
-    """
+
     for player in players:
         if player.role in scores:
             player.points += scores[player.role]
@@ -79,7 +62,6 @@ def update_player_scores(players: List[Player], scores: Dict[str, int]) -> List[
 
 
 def get_mantri_player(players: List[Player]) -> Player:
-    """Get the player with Mantri role"""
     for player in players:
         if player.role == 'Mantri':
             return player
@@ -87,7 +69,7 @@ def get_mantri_player(players: List[Player]) -> Player:
 
 
 def get_chor_player(players: List[Player]) -> Player:
-    """Get the player with Chor role"""
+   
     for player in players:
         if player.role == 'Chor':
             return player
@@ -95,7 +77,6 @@ def get_chor_player(players: List[Player]) -> Player:
 
 
 def get_player_by_role(players: List[Player], role: str) -> Player:
-    """Get player by their role"""
     for player in players:
         if player.role == role:
             return player
@@ -103,10 +84,7 @@ def get_player_by_role(players: List[Player], role: str) -> Player:
 
 
 def prepare_game_result(players: List[Player], game: Game) -> Dict:
-    """
-    Prepare the final game result to be returned to players.
-    Includes all roles revealed and final scores.
-    """
+   
     result = {
         'game_id': game.game_id,
         'mantri_guess_correct': game.guess_correct,
@@ -128,3 +106,4 @@ def prepare_game_result(players: List[Player], game: Game) -> Dict:
         })
     
     return result
+
